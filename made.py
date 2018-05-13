@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import utils 
 
 # ------------------------------------------------------------------------------
 
@@ -96,10 +97,17 @@ class MADE(nn.Module):
     def forward(self, x):
         return self.net(x)
 
+    def sample(self, epoch):
+        with torch.no_grad():
+            x = torch.Tensor(144, 28*28).fill_(0)
+            for i in range(28*28):
+                out = self.forward(x)  
+                x[:, i] = torch.bernoulli(torch.sigmoid(out[:, i]))  
+        utils.save_image(x.view(144, 1, 28, 28), 'sample_{:02d}.png'.format(epoch), nrow=12, padding=0)
+
 # ------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    from torch.autograd import Variable
     
     # run a quick and dirty test for the autoregressive property
     D = 10
@@ -126,14 +134,25 @@ if __name__ == '__main__':
         # dimensions it depends on.
         res = []
         for k in range(nout):
-            xtr = Variable(torch.from_numpy(x), requires_grad=True)
+            xtr = torch.from_numpy(x).requires_grad_()
             xtrhat = model(xtr)
             loss = xtrhat[0,k]
             loss.backward()
             
-            depends = (xtr.grad[0].numpy() != 0).astype(np.uint8)
-            depends_ix = list(np.where(depends)[0])
-            isok = k % nin not in depends_ix
+            # run backpropagation for each dimension to compute what other
+            # dimensions it depends on.
+            res = []
+            for k in range(D):
+                xtr = torch.from_numpy(x).requires_grad_()
+                xtrhat = model(xtr)
+                loss = xtrhat[0,k]
+                loss.backward()
+
+                depends = (xtr.grad[0].numpy() != 0).astype(np.uint8)
+                depends_ix = list(np.where(depends)[0])
+                isok = k % nin not in depends_ix
+                
+                res.append((len(depends_ix), k, depends_ix, isok))
             
             res.append((len(depends_ix), k, depends_ix, isok))
         
