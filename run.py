@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     # construct model and ship to GPU
     hidden_list = list(map(int, args.hiddens.split(',')))
-    model = MADE(xtr.size(1), hidden_list, xtr.size(1), num_masks=args.num_masks, natural_ordering=True)
+    model = MADE(xtr.size(1), hidden_list, xtr.size(1), num_masks=args.num_masks)
     print("number of model parameters:",sum([np.prod(p.size()) for p in model.parameters()]))
     model.to(device)
 

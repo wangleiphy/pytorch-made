@@ -76,6 +76,7 @@ class MADE(nn.Module):
         
         # sample the order of the inputs and the connectivity of all neurons
         self.m[-1] = np.arange(self.nin) if self.natural_ordering else rng.permutation(self.nin)
+        self.order = np.argsort(self.m[-1])
         for l in range(L):
             self.m[l] = rng.randint(self.m[l-1].min(), self.nin-1, size=self.hidden_sizes[l])
         
@@ -100,7 +101,7 @@ class MADE(nn.Module):
     def sample(self, epoch):
         with torch.no_grad():
             x = torch.Tensor(144, 28*28).fill_(0)
-            for i in range(28*28):
+            for i in self.order:
                 out = self.forward(x)  
                 x[:, i] = torch.bernoulli(torch.sigmoid(out[:, i]))  
         utils.save_image(x.view(144, 1, 28, 28), 'sample_{:02d}.png'.format(epoch), nrow=12, padding=0)
